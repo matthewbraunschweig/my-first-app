@@ -14,3 +14,4 @@ A beginner Next.js to-do app built on a MacBook.
 npm install
 npm run dev
 
+trigger deploy Thu Feb 19 00:07:00 MST 2026
