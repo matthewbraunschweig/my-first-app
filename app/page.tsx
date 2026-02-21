@@ -1,28 +1,39 @@
-"use client";
+"use client"; // Run this component in the browser (needed for useState/useEffect/localStorage).
 
 import { useEffect, useState } from "react";
+import pkg from "../package.json"; // Read app version from package.json
 
+// Shape of each task in our app.
 type Task = {
   id: number;
   text: string;
   completed: boolean;
-  dueDate: string; // YYYY-MM-DD
+  dueDate: string; // Format: YYYY-MM-DD from <input type="date">
 };
 
 export default function Home() {
+  // Inputs for creating a new task
   const [taskInput, setTaskInput] = useState("");
   const [dueDateInput, setDueDateInput] = useState("");
+
+  // Main task list state
   const [tasks, setTasks] = useState<Task[]>([]);
 
+  // Editing state (which task is being edited + temp values)
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editInput, setEditInput] = useState("");
   const [editDueDateInput, setEditDueDateInput] = useState("");
 
+  // Badge shown in bottom-right corner
+  const appVersion = `v${pkg.version}`;
+
+  // Load tasks once when page opens
   useEffect(() => {
     const saved = localStorage.getItem("tasks-v3");
     if (saved) setTasks(JSON.parse(saved));
   }, []);
 
+  // Save tasks whenever tasks change
   useEffect(() => {
     localStorage.setItem("tasks-v3", JSON.stringify(tasks));
   }, [tasks]);
@@ -32,7 +43,7 @@ export default function Home() {
     if (!trimmed) return;
 
     const newTask: Task = {
-      id: Date.now(),
+      id: Date.now(), // Simple unique id
       text: trimmed,
       completed: false,
       dueDate: dueDateInput,
@@ -59,6 +70,7 @@ export default function Home() {
     setTasks((prev) => prev.filter((task) => !task.completed));
   }
 
+  // Begin editing: copy task values into edit inputs
   function startEditing(task: Task) {
     setEditingId(task.id);
     setEditInput(task.text);
@@ -85,6 +97,7 @@ export default function Home() {
     cancelEditing();
   }
 
+  // Small stats shown in the UI
   const completedCount = tasks.filter((t) => t.completed).length;
 
   return (
@@ -92,6 +105,7 @@ export default function Home() {
       <div className="mx-auto max-w-3xl space-y-6">
         <h1 className="text-4xl font-bold">My Mini To-Do App</h1>
 
+        {/* New task form */}
         <div className="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
           <input
             value={taskInput}
@@ -116,6 +130,7 @@ export default function Home() {
           </button>
         </div>
 
+        {/* Stats + clear button */}
         <div className="flex items-center justify-between text-sm text-slate-300">
           <p>
             Total: {tasks.length} | Completed: {completedCount}
@@ -128,6 +143,7 @@ export default function Home() {
           </button>
         </div>
 
+        {/* Task list */}
         <ul className="space-y-2">
           {tasks.map((task) => (
             <li
@@ -143,6 +159,7 @@ export default function Home() {
                     className="mt-1 h-4 w-4 accent-cyan-400"
                   />
 
+                  {/* Edit mode vs normal view */}
                   {editingId === task.id ? (
                     <div className="flex-1 space-y-2">
                       <input
@@ -179,6 +196,7 @@ export default function Home() {
                   )}
                 </label>
 
+                {/* Task action buttons */}
                 <div className="flex gap-2">
                   {editingId === task.id ? (
                     <>
@@ -216,9 +234,15 @@ export default function Home() {
           ))}
         </ul>
 
+        {/* Empty state */}
         {tasks.length === 0 && (
           <p className="text-slate-400">No tasks yet. Add your first one.</p>
         )}
+      </div>
+
+      {/* Version badge */}
+      <div className="fixed bottom-3 right-3 rounded-md border border-slate-600 bg-slate-800/90 px-3 py-1 text-xs text-slate-200">
+        {appVersion}
       </div>
     </main>
   );
