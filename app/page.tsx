@@ -6,19 +6,25 @@ type Task = {
   id: number;
   text: string;
   completed: boolean;
+  dueDate: string; // YYYY-MM-DD
 };
 
 export default function Home() {
   const [taskInput, setTaskInput] = useState("");
+  const [dueDateInput, setDueDateInput] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
 
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editInput, setEditInput] = useState("");
+  const [editDueDateInput, setEditDueDateInput] = useState("");
+
   useEffect(() => {
-    const saved = localStorage.getItem("tasks-v2");
+    const saved = localStorage.getItem("tasks-v3");
     if (saved) setTasks(JSON.parse(saved));
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("tasks-v2", JSON.stringify(tasks));
+    localStorage.setItem("tasks-v3", JSON.stringify(tasks));
   }, [tasks]);
 
   function addTask() {
@@ -29,10 +35,12 @@ export default function Home() {
       id: Date.now(),
       text: trimmed,
       completed: false,
+      dueDate: dueDateInput,
     };
 
     setTasks((prev) => [...prev, newTask]);
     setTaskInput("");
+    setDueDateInput("");
   }
 
   function deleteTask(id: number) {
@@ -51,14 +59,40 @@ export default function Home() {
     setTasks((prev) => prev.filter((task) => !task.completed));
   }
 
+  function startEditing(task: Task) {
+    setEditingId(task.id);
+    setEditInput(task.text);
+    setEditDueDateInput(task.dueDate);
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+    setEditInput("");
+    setEditDueDateInput("");
+  }
+
+  function saveEdit(id: number) {
+    const trimmed = editInput.trim();
+    if (!trimmed) return;
+
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === id
+          ? { ...task, text: trimmed, dueDate: editDueDateInput }
+          : task
+      )
+    );
+    cancelEditing();
+  }
+
   const completedCount = tasks.filter((t) => t.completed).length;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-8">
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="mx-auto max-w-3xl space-y-6">
         <h1 className="text-4xl font-bold">My Mini To-Do App</h1>
 
-        <div className="flex gap-2">
+        <div className="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
           <input
             value={taskInput}
             onChange={(e) => setTaskInput(e.target.value)}
@@ -66,7 +100,13 @@ export default function Home() {
               if (e.key === "Enter") addTask();
             }}
             placeholder="Enter a task..."
-            className="flex-1 rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 outline-none focus:border-cyan-400"
+            className="rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 outline-none focus:border-cyan-400"
+          />
+          <input
+            type="date"
+            value={dueDateInput}
+            onChange={(e) => setDueDateInput(e.target.value)}
+            className="rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 outline-none focus:border-cyan-400"
           />
           <button
             onClick={addTask}
@@ -92,30 +132,86 @@ export default function Home() {
           {tasks.map((task) => (
             <li
               key={task.id}
-              className="flex items-center justify-between rounded-xl bg-slate-900 border border-slate-800 px-4 py-3"
+              className="rounded-xl bg-slate-900 border border-slate-800 px-4 py-3"
             >
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={task.completed}
-                  onChange={() => toggleTask(task.id)}
-                  className="h-4 w-4 accent-cyan-400"
-                />
-                <span
-                  className={
-                    task.completed ? "line-through text-slate-500" : "text-white"
-                  }
-                >
-                  {task.text}
-                </span>
-              </label>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <label className="flex items-start gap-3 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={task.completed}
+                    onChange={() => toggleTask(task.id)}
+                    className="mt-1 h-4 w-4 accent-cyan-400"
+                  />
 
-              <button
-                onClick={() => deleteTask(task.id)}
-                className="rounded-lg bg-rose-500 px-3 py-1 text-sm font-medium hover:bg-rose-400 transition"
-              >
-                Delete
-              </button>
+                  {editingId === task.id ? (
+                    <div className="flex-1 space-y-2">
+                      <input
+                        value={editInput}
+                        onChange={(e) => setEditInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveEdit(task.id);
+                          if (e.key === "Escape") cancelEditing();
+                        }}
+                        className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 outline-none focus:border-cyan-400"
+                      />
+                      <input
+                        type="date"
+                        value={editDueDateInput}
+                        onChange={(e) => setEditDueDateInput(e.target.value)}
+                        className="rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 outline-none focus:border-cyan-400"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <p
+                        className={
+                          task.completed
+                            ? "line-through text-slate-500"
+                            : "text-white"
+                        }
+                      >
+                        {task.text}
+                      </p>
+                      <p className="text-sm text-slate-400">
+                        Due: {task.dueDate || "No due date"}
+                      </p>
+                    </div>
+                  )}
+                </label>
+
+                <div className="flex gap-2">
+                  {editingId === task.id ? (
+                    <>
+                      <button
+                        onClick={() => saveEdit(task.id)}
+                        className="rounded-lg bg-emerald-500 px-3 py-1 text-sm font-medium hover:bg-emerald-400 transition"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        className="rounded-lg bg-slate-700 px-3 py-1 text-sm font-medium hover:bg-slate-600 transition"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => startEditing(task)}
+                      className="rounded-lg bg-indigo-500 px-3 py-1 text-sm font-medium hover:bg-indigo-400 transition"
+                    >
+                      Edit
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => deleteTask(task.id)}
+                    className="rounded-lg bg-rose-500 px-3 py-1 text-sm font-medium hover:bg-rose-400 transition"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
             </li>
           ))}
         </ul>
